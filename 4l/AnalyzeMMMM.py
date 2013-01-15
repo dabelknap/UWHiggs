@@ -4,21 +4,29 @@ H to ZZ to 4l analyzer for the 4mu final state.
 @author D. Austin Belknap
 '''
 
-import FinalStateAnalysis.PlotTools.MegaBase import MegaBase
+from FinalStateAnalysis.PlotTools.MegaBase import MegaBase
+
+Z_MASS = 91.188
 
 class AnalyzeMMMM(MegaBase):
     tree = 'mmmm/final/Ntuple'
-    Z_MASS = 91.188
+    global Z_MASS
+
+    def __init__(self, tree, outfile, **kwargs):
+        self.tree = tree
+        self.outfile = outfile
 
     def begin(self):
+        pass
 
     def process(self):
+        self.eventCounts = 0
         for row in self.tree:
             if not self.triggers(row):
                 continue
             if not self.loose_lepton(row):
                 continue
-            if not self.Z_candidates(row):
+            if not self.assign_Z_candidates(row):
                 continue
             if not self.qcd_suppress(row):
                 continue
@@ -26,11 +34,12 @@ class AnalyzeMMMM(MegaBase):
                 continue
             if not self.HZZ4l_phase_space(row):
                 continue
+            self.eventCounts += 1
 
-            
-            
 
     def finish(self):
+        print "Events Passed", self.eventCounts
+        pass
 
 
     # The selectors are located here
@@ -51,7 +60,7 @@ class AnalyzeMMMM(MegaBase):
         Check that in the n-tuple row m1/m2 correspond to the first Z, and m3/m4 the second Z
         '''
         passed = True
-        passed = passed and (row_m1_m2_SS == 0 and row_m3_m4_SS == 0)                        # make sure lepton pairs are opposite sign
+        passed = passed and (row.m1_m2_SS == 0 and row.m3_m4_SS == 0)                        # make sure lepton pairs are opposite sign
         passed = passed and (row.m1Pt > row.m2Pt and row.m3Pt > row.m4Pt)                    # first lepton of a Z cand. should be leading in pt
         passed = passed and ( abs(row.m1_m2_Mass - Z_MASS) < abs(row.m3_m4_Mass - Z_MASS) )  # Z1 is closest to nominal Z mass
 
@@ -88,4 +97,4 @@ class AnalyzeMMMM(MegaBase):
         return row.Mass > 70
 
     def HZZ4l_phase_space(self, row):
-        retrn row.Mass > 100 and row.m3_m4_Mass > 12
+        return row.Mass > 100 and row.m3_m4_Mass > 12
