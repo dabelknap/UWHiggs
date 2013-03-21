@@ -1,5 +1,5 @@
 '''
-H to ZZ to 4l analyzer for the 4mu final state.
+H to ZZ to 4l analyzer for the 2e2mu final state.
 
 @author D. Austin Belknap
 '''
@@ -10,8 +10,8 @@ import numpy as npy
 
 Z_MASS = 91.188
 
-class AnalyzeMMMM(MegaBase):
-    tree = 'mmmm/final/Ntuple'
+class AnalyzeEEMM(MegaBase):
+    tree = 'eemm/final/Ntuple'
     global Z_MASS
 
     def __init__(self, tree, outfile, **kwargs):
@@ -28,9 +28,11 @@ class AnalyzeMMMM(MegaBase):
         for row in self.tree:
             if not self.triggers(row):
                 continue
-            if not self.loose_lepton(row):
+            if not self.Z_mass(row):
                 continue
             if not self.lepton_iso(row):
+                continue
+            if not self.lepton_trigger(row):
                 continue
             if not self.qcd_suppress(row):
                 continue
@@ -38,6 +40,7 @@ class AnalyzeMMMM(MegaBase):
                 continue
             if not self.HZZ4l_phase_space(row):
                 continue
+            print row.evt, " ", row.Mass, " ", row.e1_e2_Mass, " ", row.m1_m2_Mass, " ", row.e1Pt, " ", row.e2Pt, " ", row.m1Pt, " ", row.m2Pt
             self.eventCounts += 1
             self.event_set.add( row.evt )
 
@@ -49,37 +52,38 @@ class AnalyzeMMMM(MegaBase):
         pass
 
 
+    def lepton_trigger(self, row):
+        pts = [ row.e1Pt, row.e2Pt, row.m1Pt, row.m2Pt ]
+        pts.sort()
+        pts.reverse()
+
+        return pts[0] > 20 and pts[1] > 10
+
+
+    def Z_mass(self, row):
+        Z1, Z2 = self.identifyZ(row)
+        return 40 < Z1 < 120 and 4 < Z2 < 120
+
+
+    def identifyZ(self, row):
+        Zee = row.e1_e2_Mass
+        Zmm = row.m1_m2_Mass
+        
+        if ( abs(Z_MASS - Zee) < abs(Z_MASS - Zmm) ):
+            return (Zee, Zmm)
+        else:
+            return (Zmm, Zee)
+
+
+
     # The selectors are located here
     def triggers(self, row):
-        return (row.doubleMuPass == 1)
+        return True
 
-    def loose_lepton(self, row):
-        pt_pass  = row.m1Pt > 5 and row.m2Pt > 5 and row.m3Pt > 5 and row.m4Pt > 5
-        eta_pass = row.m1AbsEta < 2.4 and row.m2AbsEta < 2.4 and row.m3AbsEta < 2.4 and row.m4AbsEta < 2.4
-        dxy_pass = row.m1PVDXY < 0.5 and row.m2PVDXY < 0.5 and row.m3PVDXY < 0.5 and row.m4PVDXY < 0.5
-        dz_pass  = row.m1PVDZ < 0.5 and row.m2PVDZ < 0.5 and row.m3PVDZ < 0.5 and row.m4PVDZ < 0.5
-        muon_id  = (row.m1IsGlobal or row.m1IsTracker) and (row.m2IsGlobal or row.m2IsTracker) and  (row.m3IsGlobal or row.m3IsTracker) and  (row.m4IsGlobal or row.m4IsTracker)
-
-        return pt_pass and eta_pass and dxy_pass and dz_pass and muon_id
 
     def lepton_iso(self, row):
-        l1iso = row.m1RelPFIsoDB
-        l2iso = row.m2RelPFIsoDB
-        l3iso = row.m3RelPFIsoDB
-        l4iso = row.m4RelPFIsoDB
-
-        return (l1iso < 0.4 and l2iso < 0.4 and l3iso < 0.4 and l4iso < 0.4)
-
-    def disambiguate_Zcands(self, row):
-        '''
-        Check that in the n-tuple row m1/m2 correspond to the first Z, and m3/m4 the second Z
-        '''
-        passed = True
-        passed = passed and (row.m1_m2_SS == 0 and row.m3_m4_SS == 0)                        # make sure lepton pairs are opposite sign
-        passed = passed and (row.m1Pt > row.m2Pt and row.m3Pt > row.m4Pt)                    # first lepton of a Z cand. should be leading in pt
-        passed = passed and ( abs(row.m1_m2_Mass - Z_MASS) < abs(row.m3_m4_Mass - Z_MASS) )  # Z1 is closest to nominal Z mass
-
-        return passed
+        # print "->", row.e1RelPFIsoRho ,  row.e2RelPFIsoRho ,  row.m1RelPFIsoRho ,  row.m2RelPFIsoRho
+        return row.e1RelPFIsoRho < 0.4 and row.e2RelPFIsoRho < 0.4 and row.m1RelPFIsoRho < 0.4 and row.m2RelPFIsoRho < 0.4
 
 
     def qcd_suppress(self, row):
@@ -88,23 +92,23 @@ class AnalyzeMMMM(MegaBase):
         '''
         passed = True
 
+        if row.e1_e2_SS == 0:
+            passed = passed and row.e1_e2_Mass > 4
+
+        if row.e1_m1_SS == 0:
+            passed = passed and row.e1_m1_Mass > 4
+
+        if row.e1_m2_SS == 0:
+            passed = passed and row.e1_m2_Mass > 4
+
+        if row.e2_m1_SS == 0:
+            passed = passed and row.e2_m1_Mass > 4
+
+        if row.e2_m2_SS == 0:
+            passed = passed and row.e2_m2_Mass > 4
+
         if row.m1_m2_SS == 0:
             passed = passed and row.m1_m2_Mass > 4
-
-        if row.m1_m3_SS == 0:
-            passed = passed and row.m1_m3_Mass > 4
-
-        if row.m1_m4_SS == 0:
-            passed = passed and row.m1_m4_Mass > 4
-
-        if row.m2_m3_SS == 0:
-            passed = passed and row.m2_m3_Mass > 4
-
-        if row.m2_m4_SS == 0:
-            passed = passed and row.m2_m4_Mass > 4
-
-        if row.m3_m4_SS == 0:
-            passed = passed and row.m3_m4_Mass > 4
 
         return passed
 
@@ -112,4 +116,5 @@ class AnalyzeMMMM(MegaBase):
         return row.Mass > 70
 
     def HZZ4l_phase_space(self, row):
-        return row.Mass > 70 and row.m3_m4_Mass > 12
+        Z1, Z2 = self.identifyZ(row)
+        return row.Mass > 70 and Z2 > 12
