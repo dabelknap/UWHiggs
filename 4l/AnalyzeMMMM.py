@@ -7,6 +7,7 @@ H to ZZ to 4l analyzer for the 4mu final state.
 from FinalStateAnalysis.PlotTools.MegaBase import MegaBase
 import ROOT as rt
 import numpy as npy
+import json
 
 Z_MASS = 91.188
 
@@ -18,9 +19,11 @@ class AnalyzeMMMM( MegaBase ):
         self.tree      = tree
         self.outfile   = outfile
         self.event_set = set()
+        self.ntuple    = {}
+        self.jsonFile  = open('4m_output.json','w')
 
     def begin(self):
-        # self.mytree = self.book('path/to/', 'ntupleName', 'ntupleTitle', type=ROOT.TTree)
+        # self.mytree = self.book('./', 'hzz4m', 'hzz4m', type=rt.TTree)
         # self.mytree.CopyAddresses( self.tree )
         pass
 
@@ -30,11 +33,9 @@ class AnalyzeMMMM( MegaBase ):
         for row in self.tree:
             if not self.triggers(row):
                 continue
-            if not self.loose_lepton(row):
-                continue
             if not self.Z_mass(row):
                 continue
-            if not self.lepton_iso2(row):
+            if not self.lepton_iso(row):
                 continue
             if not self.lepton_trigger(row):
                 continue
@@ -42,7 +43,8 @@ class AnalyzeMMMM( MegaBase ):
                 continue
             if not self.HZZ4l_phase_space(row):
                 continue
-            print row.evt, " ", row.Mass, " ", row.m1_m2_Mass, " ", row.m3_m4_Mass, " ", row.m1Pt, " ", row.m2Pt, " ", row.m3Pt, " ", row.m4Pt
+
+            self.output_ntuple(row)
             self.eventCounts += 1
             self.event_set.add( row.evt )
             # self.mytree.Fill()
@@ -51,7 +53,10 @@ class AnalyzeMMMM( MegaBase ):
     def finish(self):
         print ""
         print self.eventCounts
-        print self.event_set
+
+        self.jsonFile.write( json.dumps(self.ntuple,indent=4) )
+        self.jsonFile.close()
+
         pass
 
 
@@ -60,35 +65,8 @@ class AnalyzeMMMM( MegaBase ):
         return (row.doubleMuPass == 1)
 
 
-    def loose_lepton(self, row):
-        pt_pass  = row.m1Pt > 5 and row.m2Pt > 5 and row.m3Pt > 5 and row.m4Pt > 5
-        eta_pass = row.m1AbsEta < 2.4 and row.m2AbsEta < 2.4 and row.m3AbsEta < 2.4 and row.m4AbsEta < 2.4
-        dxy_pass = row.m1PVDXY < 0.5 and row.m2PVDXY < 0.5 and row.m3PVDXY < 0.5 and row.m4PVDXY < 0.5
-        dz_pass  = row.m1PVDZ < 1 and row.m2PVDZ < 1 and row.m3PVDZ < 1 and row.m4PVDZ < 1
-        muon_id  = (row.m1IsGlobal or row.m1IsTracker) and (row.m2IsGlobal or row.m2IsTracker) and  (row.m3IsGlobal or row.m3IsTracker) and  (row.m4IsGlobal or row.m4IsTracker)
-
-        return pt_pass and eta_pass and dxy_pass and dz_pass and muon_id
-
-
-    def pfRelIso(self, pt, chrg, neuHad, phot, rho, EA):
-        iso = ( chrg + max(0.0, neuHad + phot - rho*EA) )/pt
-        return iso
-
-
     def lepton_iso(self, row):
-        l1_iso = self.pfRelIso( row.m1Pt, row.m1PFChargedIso, row.m1PFNeutralIso, row.m1PFPhotonIso, row.rho, row.m1EffectiveArea2012 )
-        l2_iso = self.pfRelIso( row.m2Pt, row.m2PFChargedIso, row.m2PFNeutralIso, row.m2PFPhotonIso, row.rho, row.m2EffectiveArea2012 )
-        l3_iso = self.pfRelIso( row.m3Pt, row.m3PFChargedIso, row.m3PFNeutralIso, row.m3PFPhotonIso, row.rho, row.m3EffectiveArea2012 )
-        l4_iso = self.pfRelIso( row.m4Pt, row.m4PFChargedIso, row.m4PFNeutralIso, row.m4PFPhotonIso, row.rho, row.m4EffectiveArea2012 )
-
-        print "->", l1_iso, l2_iso, l3_iso, l4_iso
-
-        return l1_iso < 0.4 and l2_iso < 0.4 and l3_iso < 0.4 and l4_iso < 0.4
-
-
-    def lepton_iso2(self, row):
-        print "->", row.m1RelPFIsoRho ,  row.m2RelPFIsoRho ,  row.m3RelPFIsoRho ,  row.m4RelPFIsoRho
-        return row.m1RelPFIsoRho < 0.4 and row.m2RelPFIsoRho < 0.4 and row.m3RelPFIsoRho < 0.4 and row.m4RelPFIsoRho < 0.4
+        return row.m1RelPFIsoRhoFSR < 0.4 and row.m2RelPFIsoRhoFSR < 0.4 and row.m3RelPFIsoRhoFSR < 0.4 and row.m4RelPFIsoRhoFSR < 0.4
 
 
     def lepton_trigger(self, row):
@@ -96,7 +74,7 @@ class AnalyzeMMMM( MegaBase ):
         pts.sort()
         pts.reverse()
 
-        return pts[0] > 20 and pts[1] > 10
+        return pts[0] > 20.0 and pts[1] > 10.0
 
 
     def disambiguate_Zcands(self, row):
@@ -118,30 +96,68 @@ class AnalyzeMMMM( MegaBase ):
         passed = True
 
         if row.m1_m2_SS == 0:
-            passed = passed and row.m1_m2_Mass > 4
+            passed = passed and row.m1_m2_Mass > 4.0
 
         if row.m1_m3_SS == 0:
-            passed = passed and row.m1_m3_Mass > 4
+            passed = passed and row.m1_m3_Mass > 4.0
 
         if row.m1_m4_SS == 0:
-            passed = passed and row.m1_m4_Mass > 4
+            passed = passed and row.m1_m4_Mass > 4.0
 
         if row.m2_m3_SS == 0:
-            passed = passed and row.m2_m3_Mass > 4
+            passed = passed and row.m2_m3_Mass > 4.0
 
         if row.m2_m4_SS == 0:
-            passed = passed and row.m2_m4_Mass > 4
+            passed = passed and row.m2_m4_Mass > 4.0
 
         if row.m3_m4_SS == 0:
-            passed = passed and row.m3_m4_Mass > 4
+            passed = passed and row.m3_m4_Mass > 4.0
 
         return passed
 
     def z4l_phase_space(self, row):
-        return row.Mass > 70
+        return row.MassFsr > 70.0
 
     def Z_mass(self, row):
-        return 40 < row.m1_m2_Mass < 120 and 4 < row.m3_m4_Mass < 120
+        return 40.0 < row.m1_m2_MassFsr < 120.0 and 4.0 < row.m3_m4_MassFsr < 120.0
 
     def HZZ4l_phase_space(self, row):
-        return row.Mass > 70 and row.m3_m4_Mass > 12
+        return row.MassFsr > 70.0 and row.m3_m4_MassFsr > 12.0
+
+    def output_ntuple(self, rtRow):
+        row = {}
+
+        row["event"]   = rtRow.evt
+        row["lumi"]    = rtRow.lumi
+        row["run"]     = rtRow.run
+
+        row["mass"]    = rtRow.MassFsr
+        row["pt"]      = rtRow.PtFsr
+
+        row["z1mass"]  = rtRow.m1_m2_MassFsr
+        row["z1pt"]    = rtRow.m1_m2_PtFsr
+
+        row["z2mass"]  = rtRow.m3_m4_MassFsr
+        row["z2pt"]    = rtRow.m3_m4_PtFsr
+
+        row["z1l1pt"]  = rtRow.m1Pt
+        row["z1l2pt"]  = rtRow.m2Pt
+        row["z2l1pt"]  = rtRow.m3Pt
+        row["z2l2pt"]  = rtRow.m4Pt
+
+        row["z1l1eta"]  = rtRow.m1Eta
+        row["z1l2eta"]  = rtRow.m2Eta
+        row["z2l1eta"]  = rtRow.m3Eta
+        row["z2l2eta"]  = rtRow.m4Eta
+
+        row["z1l1phi"]  = rtRow.m1Phi
+        row["z1l2phi"]  = rtRow.m2Phi
+        row["z2l1phi"]  = rtRow.m3Phi
+        row["z2l2phi"]  = rtRow.m4Phi
+
+        row["z1l1relIso"]  = rtRow.m1RelPFIsoRhoFSR
+        row["z1l2relIso"]  = rtRow.m2RelPFIsoRhoFSR
+        row["z2l1relIso"]  = rtRow.m3RelPFIsoRhoFSR
+        row["z2l2relIso"]  = rtRow.m4RelPFIsoRhoFSR
+
+        self.ntuple[rtRow.evt] = row
