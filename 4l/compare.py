@@ -22,8 +22,8 @@ diff_set = set()
 
 
 def print_comparision( event, ntuple1, ntuple2 ):
-    vars = ["event","mass","z1mass","z2mass","z1l1pt","z1l1relIso","z1l2pt",
-            "z1l2relIso","z2l1pt","z2l1relIso","z2l2pt","z2l2relIso"]
+    vars = ["event","mass","z1mass","z2mass","z1l1pt","z1l2pt",
+            "z2l1pt","z2l2pt","channel"]
 
     lengths = [5,7,7,7,7,12,7,12,7,12,7,12]
 
@@ -52,8 +52,10 @@ def print_comparision( event, ntuple1, ntuple2 ):
 
 if comp == "subtract":
     diff_set = event_set1 - event_set2
+    print len(diff_set)
 elif comp == "intersect":
     diff_set = event_set1.intersection( event_set2 )
+    print len(diff_set)
 
-for event in diff_set:
-    print_comparision( event, ntuple1, ntuple2 )
+    for event in diff_set:
+        print_comparision( event, ntuple1, ntuple2 )

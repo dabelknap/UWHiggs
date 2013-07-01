@@ -7,6 +7,7 @@ H to ZZ to 4l analyzer for the 4e final state.
 from FinalStateAnalysis.PlotTools.MegaBase import MegaBase
 import ROOT as rt
 import numpy as npy
+import json
 
 Z_MASS = 91.188
 
@@ -18,6 +19,8 @@ class AnalyzeEEEE(MegaBase):
         self.tree      = tree
         self.outfile   = outfile
         self.event_set = set()
+        self.ntuple    = {}
+        self.jsonFile  = open('4e_output.json','w')
 
     def begin(self):
         pass
@@ -40,7 +43,8 @@ class AnalyzeEEEE(MegaBase):
                 continue
             if not self.HZZ4l_phase_space(row):
                 continue
-            print row.evt, " ", row.Mass, " ", row.e1_e2_Mass, " ", row.e3_e4_Mass, " ", row.e1Pt, " ", row.e2Pt, " ", row.e3Pt, " ", row.e4Pt
+
+            self.output_ntuple(row)
             self.eventCounts += 1
             self.event_set.add( row.evt )
 
@@ -48,7 +52,9 @@ class AnalyzeEEEE(MegaBase):
     def finish(self):
         print ""
         print self.eventCounts
-        print self.event_set
+
+        self.jsonFile.write( json.dumps(self.ntuple,indent=4) )
+        self.jsonFile.close()
         pass
 
 
@@ -61,7 +67,7 @@ class AnalyzeEEEE(MegaBase):
 
 
     def Z_mass(self, row):
-        return 40 < row.e1_e2_Mass < 120 and 4 < row.e3_e4_Mass < 120
+        return 40 < row.e1_e2_MassFsr < 120 and 4 < row.e3_e4_MassFsr < 120
 
 
     # The selectors are located here
@@ -71,7 +77,7 @@ class AnalyzeEEEE(MegaBase):
 
     def lepton_iso(self, row):
         # print "->", row.e1RelPFIsoRho ,  row.e2RelPFIsoRho ,  row.e3RelPFIsoRho ,  row.e4RelPFIsoRho
-        return row.e1RelPFIsoRho < 0.4 and row.e2RelPFIsoRho < 0.4 and row.e3RelPFIsoRho < 0.4 and row.e4RelPFIsoRho < 0.4
+        return row.e1RelPFIsoRhoFSR < 0.4 and row.e2RelPFIsoRhoFSR < 0.4 and row.e3RelPFIsoRhoFSR < 0.4 and row.e4RelPFIsoRhoFSR < 0.4
 
 
     def qcd_suppress(self, row):
@@ -101,7 +107,47 @@ class AnalyzeEEEE(MegaBase):
         return passed
 
     def z4l_phase_space(self, row):
-        return row.Mass > 70
+        return row.MassFsr > 70
 
     def HZZ4l_phase_space(self, row):
-        return row.Mass > 70 and row.e3_e4_Mass > 12
+        return row.MassFsr > 70 and row.e3_e4_MassFsr > 12
+    
+    def output_ntuple(self, rtRow):
+        row = {}
+
+        row["event"]   = rtRow.evt
+        row["lumi"]    = rtRow.lumi
+        row["run"]     = rtRow.run
+
+        row["mass"]    = rtRow.MassFsr
+        row["pt"]      = rtRow.PtFsr
+
+        row["z1mass"]  = rtRow.e1_e2_MassFsr
+        row["z1pt"]    = rtRow.e1_e2_PtFsr
+
+        row["z2mass"]  = rtRow.e3_e4_MassFsr
+        row["z2pt"]    = rtRow.e3_e4_PtFsr
+
+        row["z1l1pt"]  = rtRow.e1Pt
+        row["z1l2pt"]  = rtRow.e2Pt
+        row["z2l1pt"]  = rtRow.e3Pt
+        row["z2l2pt"]  = rtRow.e4Pt
+
+        row["z1l1eta"]  = rtRow.e1Eta
+        row["z1l2eta"]  = rtRow.e2Eta
+        row["z2l1eta"]  = rtRow.e3Eta
+        row["z2l2eta"]  = rtRow.e4Eta
+
+        row["z1l1phi"]  = rtRow.e1Phi
+        row["z1l2phi"]  = rtRow.e2Phi
+        row["z2l1phi"]  = rtRow.e3Phi
+        row["z2l2phi"]  = rtRow.e4Phi
+
+        row["z1l1relIso"]  = rtRow.e1RelPFIsoRhoFSR
+        row["z1l2relIso"]  = rtRow.e2RelPFIsoRhoFSR
+        row["z2l1relIso"]  = rtRow.e3RelPFIsoRhoFSR
+        row["z2l2relIso"]  = rtRow.e4RelPFIsoRhoFSR
+
+        row["channel"] = "4e"
+
+        self.ntuple[rtRow.evt] = row

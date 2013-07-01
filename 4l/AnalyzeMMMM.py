@@ -160,4 +160,6 @@ class AnalyzeMMMM( MegaBase ):
         row["z2l1relIso"]  = rtRow.m3RelPFIsoRhoFSR
         row["z2l2relIso"]  = rtRow.m4RelPFIsoRhoFSR
 
+        row["channel"] = "4mu"
+
         self.ntuple[rtRow.evt] = row
