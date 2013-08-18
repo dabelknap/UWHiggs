@@ -8,6 +8,8 @@ from FinalStateAnalysis.PlotTools.MegaBase import MegaBase
 import ROOT as rt
 import numpy as npy
 import json
+import tables as tb
+from Event import Event4l
 
 Z_MASS = 91.188
 
@@ -19,13 +21,28 @@ class AnalyzeMMMM( MegaBase ):
         self.tree      = tree
         self.outfile   = outfile
         self.event_set = set()
-        self.ntuple    = {}
-        self.jsonFile  = open('4m_output.json','w')
+        #self.ntuple    = {}
+        #self.jsonFile  = open('4m_output.json','w')
 
     def begin(self):
         # self.mytree = self.book('./', 'hzz4m', 'hzz4m', type=rt.TTree)
         # self.mytree.CopyAddresses( self.tree )
-        pass
+
+        # Open HDF5 File
+        self.h5file = tb.open_file('output.h5', mode='a')
+        self.h5group = self.h5file.create_group(
+                "/",
+                'MMMM',
+                'Higgs to ZZ to 4mu'
+                )
+        self.h5table = self.h5file.create_table(
+                self.h5group,
+                'events',
+                Event4l,
+                "Selected 4mu Events"
+                )
+        self.h5row = self.h5table.row
+
 
     def process(self):
         prev_evt = 0
@@ -44,29 +61,32 @@ class AnalyzeMMMM( MegaBase ):
             if not self.HZZ4l_phase_space(row):
                 continue
 
-            self.output_ntuple(row)
-            self.eventCounts += 1
-            self.event_set.add( row.evt )
+            #self.output_ntuple(row)
+            #self.event_set.add( row.evt )
             # self.mytree.Fill()
+
+            self.store_row(row)
+            self.eventCounts += 1
+
+            # flush the table every 1000 events to free memory
+            if self.eventCounts % 1000 == 0:
+                self.h5table.flush()
 
 
     def finish(self):
         print ""
         print self.eventCounts
 
-        self.jsonFile.write( json.dumps(self.ntuple,indent=4) )
-        self.jsonFile.close()
+        #self.jsonFile.write( json.dumps(self.ntuple,indent=4) )
+        #self.jsonFile.close()
 
-        pass
+        self.h5table.flush()
+        self.h5file.close()
 
 
     # The selectors are located here
     def triggers(self, row):
         return (row.doubleMuPass == 1)
-
-
-    def lepton_iso(self, row):
-        return row.m1RelPFIsoRhoFSR < 0.4 and row.m2RelPFIsoRhoFSR < 0.4 and row.m3RelPFIsoRhoFSR < 0.4 and row.m4RelPFIsoRhoFSR < 0.4
 
 
     def lepton_trigger(self, row):
@@ -75,6 +95,10 @@ class AnalyzeMMMM( MegaBase ):
         pts.reverse()
 
         return pts[0] > 20.0 and pts[1] > 10.0
+
+
+    def lepton_iso(self, row):
+        return row.m1RelPFIsoRhoFSR < 0.4 and row.m2RelPFIsoRhoFSR < 0.4 and row.m3RelPFIsoRhoFSR < 0.4 and row.m4RelPFIsoRhoFSR < 0.4
 
 
     def disambiguate_Zcands(self, row):
@@ -124,7 +148,59 @@ class AnalyzeMMMM( MegaBase ):
     def HZZ4l_phase_space(self, row):
         return row.MassFsr > 70.0 and row.m3_m4_MassFsr > 12.0
 
-    def output_ntuple(self, rtRow):
+    def store_row(self, rtRow):
+        self.h5row['channel']       = '4mu'
+        self.h5row['event']         = rtRow.evt
+        self.h5row['lumi']          = rtRow.lumi
+        self.h5row['run']           = rtRow.run
+
+        self.h5row['mass']          = rtRow.MassFsr
+        self.h5row['pt']            = rtRow.PtFsr
+
+        self.h5row['z1mass']        = rtRow.m1_m2_MassFsr
+        self.h5row['z1pt']          = rtRow.m1_m2_PtFsr
+
+        self.h5row['z2mass']        = rtRow.m3_m4_MassFsr
+        self.h5row['z2pt']          = rtRow.m3_m4_PtFsr
+
+        self.h5row['l1ID']          = 13
+        self.h5row['l2ID']          = 13
+        self.h5row['l3ID']          = 13
+        self.h5row['l4ID']          = 13
+
+        self.h5row["l1pt"]          = rtRow.m1Pt
+        self.h5row["l2pt"]          = rtRow.m2Pt
+        self.h5row["l3pt"]          = rtRow.m3Pt
+        self.h5row["l4pt"]          = rtRow.m4Pt
+
+        self.h5row["l1eta"]         = rtRow.m1Eta
+        self.h5row["l2eta"]         = rtRow.m2Eta
+        self.h5row["l3eta"]         = rtRow.m3Eta
+        self.h5row["l4eta"]         = rtRow.m4Eta
+
+        self.h5row["l1phi"]         = rtRow.m1Phi
+        self.h5row["l2phi"]         = rtRow.m2Phi
+        self.h5row["l3phi"]         = rtRow.m3Phi
+        self.h5row["l4phi"]         = rtRow.m4Phi
+
+        self.h5row['KD']            = rtRow.KD
+
+        self.h5row['costheta1']     = rtRow.costheta1
+        self.h5row['costheta2']     = rtRow.costheta2
+        self.h5row['costhetastar']  = rtRow.costhetastar
+        self.h5row['Phi']           = rtRow.Phi
+        self.h5row['Phi1']          = rtRow.Phi1
+
+        self.h5row['costheta1_gen']     = rtRow.costheta1_gen
+        self.h5row['costheta2_gen']     = rtRow.costheta2_gen
+        self.h5row['costhetastar_gen']  = rtRow.costhetastar_gen
+        self.h5row['Phi_gen']           = rtRow.Phi_gen
+        self.h5row['Phi1_gen']          = rtRow.Phi1_gen
+
+        self.h5row.append()
+
+
+    def output_ntuple_json(self, rtRow):
         row = {}
 
         row["event"]   = rtRow.evt
