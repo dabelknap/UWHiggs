@@ -10,6 +10,7 @@ import numpy as npy
 import json
 import tables as tb
 from Event import Event4l
+from mcWeighting import make_PUCorrector
 
 Z_MASS = 91.188
 
@@ -18,9 +19,10 @@ class AnalyzeMMMM( MegaBase ):
     global Z_MASS
 
     def __init__(self, tree, outfile, **kwargs):
-        self.tree      = tree
-        self.outfile   = outfile
-        self.event_set = set()
+        self.tree        = tree
+        self.outfile     = outfile
+        self.event_set   = set()
+        self.pucorrector = make_PUCorrector()
         #self.ntuple    = {}
         #self.jsonFile  = open('4m_output.json','w')
 
@@ -30,6 +32,10 @@ class AnalyzeMMMM( MegaBase ):
 
         # Open HDF5 File
         self.h5file = tb.open_file('output.h5', mode='a')
+        try:
+            self.h5file.removeNode("/MMMM", recursive=True)
+        except tb.NodeError:
+            pass
         self.h5group = self.h5file.create_group(
                 "/",
                 'MMMM',
@@ -82,6 +88,14 @@ class AnalyzeMMMM( MegaBase ):
 
         self.h5table.flush()
         self.h5file.close()
+
+
+    def event_weight(self, row):
+        # If data, don't weight
+        if row.run > 2:
+            return 1.0
+        else:
+            return self.pucorrector(row.nTruePU)
 
 
     # The selectors are located here
@@ -139,20 +153,26 @@ class AnalyzeMMMM( MegaBase ):
 
         return passed
 
+
     def z4l_phase_space(self, row):
         return row.MassFsr > 70.0
+
 
     def Z_mass(self, row):
         return 40.0 < row.m1_m2_MassFsr < 120.0 and 4.0 < row.m3_m4_MassFsr < 120.0
 
+
     def HZZ4l_phase_space(self, row):
         return row.MassFsr > 70.0 and row.m3_m4_MassFsr > 12.0
+
 
     def store_row(self, rtRow):
         self.h5row['channel']       = '4mu'
         self.h5row['event']         = rtRow.evt
         self.h5row['lumi']          = rtRow.lumi
         self.h5row['run']           = rtRow.run
+
+        self.h5row["pu_weight"]     = self.event_weight(rtRow)
 
         self.h5row['mass']          = rtRow.MassFsr
         self.h5row['pt']            = rtRow.PtFsr

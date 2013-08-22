@@ -10,6 +10,7 @@ import numpy as npy
 import tables as tb
 import json
 from Event import Event4l
+from mcWeighting import make_PUCorrector
 
 Z_MASS = 91.188
 
@@ -21,9 +22,14 @@ class AnalyzeEEEE(MegaBase):
         self.tree      = tree
         self.outfile   = outfile
         self.event_set = set()
+        self.pucorrector = make_PUCorrector()
 
     def begin(self):
         self.h5file = tb.open_file('output.h5', mode='a')
+        try:
+            self.h5file.removeNode("/EEEE", recursive=True)
+        except tb.NodeError:
+            pass
         self.h5group = self.h5file.create_group(
                 '/',
                 'EEEE',
@@ -70,6 +76,14 @@ class AnalyzeEEEE(MegaBase):
 
         self.h5table.flush()
         self.h5file.close()
+
+
+    def event_weight(self, row):
+        # If data, don't weight
+        if row.run > 2:
+            return 1.0
+        else:
+            return self.pucorrector(row.nTruePU)
 
 
     # The selectors are located here
@@ -130,6 +144,8 @@ class AnalyzeEEEE(MegaBase):
         self.h5row['event']         = rtRow.evt
         self.h5row['lumi']          = rtRow.lumi
         self.h5row['run']           = rtRow.run
+
+        self.h5row["pu_weight"]     = self.event_weight(rtRow)
 
         self.h5row['mass']          = rtRow.MassFsr
         self.h5row['pt']            = rtRow.PtFsr

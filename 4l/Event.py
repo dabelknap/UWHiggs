@@ -11,6 +11,8 @@ class Event4l( tb.IsDescription ):
     lumi            = tb.Int32Col()
     run             = tb.Int32Col()
 
+    pu_weight       = tb.Float64Col()
+
     mass            = tb.Float64Col()
     pt              = tb.Float64Col()
 
