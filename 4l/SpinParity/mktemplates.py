@@ -10,7 +10,7 @@ import ROOT as rt
 
 NTUPLE = "../ntuples/ggH125.h5"
 
-CUTS = "mass > 100"
+CUTS = "(105.7 < mass) & (mass < 140.7)"
 
 
 def P2(x):
