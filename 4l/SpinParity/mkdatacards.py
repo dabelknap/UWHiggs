@@ -18,9 +18,10 @@ CARD_DIR = './datacards/'
 SM_FILE = 'SMHiggs-126.h5'
 JP_FILES = {'0M' : 'Higgs0M-126.h5'}
 
-ZZ_FILES = ['ZZMMMM.h5', 'ZZEEEE.h5', 'ZZTTTT.h5',
-            'ZZEEMM.h5', 'ZZEETT.h5', 'ZZMMTT.h5',
-            'ggZZ2L2L.h5', 'ggZZ4L.h5']
+QQZZ_FILES = ['ZZMMMM.h5', 'ZZEEEE.h5', 'ZZTTTT.h5',
+              'ZZEEMM.h5', 'ZZEETT.h5', 'ZZMMTT.h5']
+
+GGZZ_FILES = ['ggZZ2L2L.h5', 'ggZZ4L.h5']
 
 CHANNELS = ['MMMM', 'EEEE', 'EEMM']
 
@@ -92,12 +93,13 @@ def mkdatacard(process_names, yields, shape_filename):
     out += "bin a1\n"
     out += "observation 0\n"
     out += "------------\n"
+    out += "## mass window [105.7,140.7]\n"
     out += "bin" + "".join([" a1" for x in process_names]) + "\n"
     out += "process" + "".join([" %s" % name for name in process_names]) + "\n"
     out += "process" + "".join([" %d" % (x-1) for x in xrange(n_proc)]) + "\n"
     out += "rate" + "".join([" %.4f" % x for x in yields]) + "\n"
     out += "------------\n"
-    out += "lumi_8TeV lnN" + "".join([" 1.05" for x in xrange(n_proc)])
+    out += "lumi_8TeV lnN" + "".join([" 1.044" for x in xrange(n_proc)])
 
     return out
 
@@ -114,16 +116,22 @@ if __name__ == "__main__":
 
         jp_template = mktemplate1D(NTUPLE_DIR + JP_FILE, chan, "sig_ALT")
 
-        zz_template = [rt.TH1F("bkg", "bkg", 8**3, 0, 1), 0]
-        for ZZ_FILE in ZZ_FILES:
-            tmp = mktemplate1D(NTUPLE_DIR + ZZ_FILE, chan, ZZ_FILE)
-            zz_template[0].Add(tmp[0])
-            zz_template[1] += tmp[1]
+        qqzz_template = [rt.TH1F("qqzz_bkg", "qqzz_bkg", 8**3, 0, 1), 0]
+        for QQZZ_FILE in QQZZ_FILES:
+            tmp = mktemplate1D(NTUPLE_DIR + QQZZ_FILE, chan, QQZZ_FILE)
+            qqzz_template[0].Add(tmp[0])
+            qqzz_template[1] += tmp[1]
+
+        ggzz_template = [rt.TH1F("ggzz_bkg", "ggzz_bkg", 8**3, 0, 1), 0]
+        for GGZZ_FILE in GGZZ_FILES:
+            tmp = mktemplate1D(NTUPLE_DIR + GGZZ_FILE, chan, GGZZ_FILE)
+            ggzz_template[0].Add(tmp[0])
+            ggzz_template[1] += tmp[1]
         
         out_card = open(CARD_DIR + 'datacard_8TeV_' + chan + '.txt', 'w')
 
-        process_names = ["sig", "sig_ALT", "bkg"]
-        yields = [sm_template[1], jp_template[1], zz_template[1]]
+        process_names = ["sig", "sig_ALT", "qqzz_bkg", "ggzz_bkg"]
+        yields = [sm_template[1], jp_template[1], qqzz_template[1], ggzz_template[1]]
 
         card_string = mkdatacard(process_names, yields, ROOT_name)
 
@@ -134,7 +142,8 @@ if __name__ == "__main__":
 
         sm_template[0].Write()
         jp_template[0].Write()
-        zz_template[0].Write()
+        qqzz_template[0].Write()
+        ggzz_template[0].Write()
         data.Write()
 
         out_ROOT.Close()
