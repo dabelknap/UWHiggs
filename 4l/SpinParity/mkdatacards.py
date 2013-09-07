@@ -99,7 +99,12 @@ def mkdatacard(process_names, yields, shape_filename):
     out += "process" + "".join([" %d" % (x-1) for x in xrange(n_proc)]) + "\n"
     out += "rate" + "".join([" %.4f" % x for x in yields]) + "\n"
     out += "------------\n"
-    out += "lumi_8TeV lnN" + "".join([" 1.044" for x in xrange(n_proc)])
+    out += "lumi_8TeV lnN" + "".join([" 1.044" for x in xrange(n_proc)]) + "\n"
+    out += "QCDscale_ggH lnN" + "".join([" 1.0750" if x in ["sig","sig_ALT"]
+                                         else " -"
+                                         for x in process_names]) + "\n"
+    out += "BRhiggs_hzz4l lnN" + "".join([" 1.02" if x in ["sig","sig_ALT"]
+                                          else " -" for x in process_names])
 
     return out
 
