@@ -14,12 +14,18 @@ echo "Symlinking FinalStateAnalysis into working area"
 
 pushd $CMSSW_BASE/src
 if ! [ -L FinalStateAnalysis ]; then
-  ln -s UWHiggs/dependencies/FinalStateAnalysis FinalStateAnalysis
+  if ! [ -d FinalStateAnalysis ]; then
+    ln -s UWHiggs/dependencies/FinalStateAnalysis FinalStateAnalysis
+  fi
 fi
 
 echo "Checking out FSA dependencies"
 pushd FinalStateAnalysis/recipe
-LUMI=1 LIMITS=1 PATPROD=1 ./recipe.sh
+source environment.sh
+LUMI=1 LIMITS=1 PATPROD=${PATPROD:-0} ./recipe.sh
+
+echo "Deleting unneeded PAT dependencies"
+FORCENUKE=1 ./nuke_pat_tools.sh
 
 echo "Manually creating FinalStateAnalysis python symlinks"
 ./symlink_python.sh

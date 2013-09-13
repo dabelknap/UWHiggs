@@ -19,11 +19,12 @@ import array
 import MuMuMuTree
 from FinalStateAnalysis.PlotTools.MegaBase import MegaBase
 import os
+import ROOT
 
 def control_region(row):
     # Figure out what control region we are in.
     if row.m1RelPFIsoDB < 0.25 and row.m2RelPFIsoDB < 0.25 \
-       and row.m1_m2_Zcompat < 20 and row.metEt < 25\
+       and row.m1_m2_Zcompat < 20 and row.type1_pfMetEt < 25\
        and row.m3MtToMET < 20:
         return 'zmm'
     else:
@@ -53,13 +54,13 @@ class FakeRatesMMM(MegaBase):
                     num_histos = {}
                     self.histograms[num_key] = num_histos
 
-                    def book_histo(name, *args):
+                    def book_histo(name, *args, **kwargs):
                         # Helper to book a histogram
                         if name not in denom_histos:
                             denom_histos[name] = self.book(os.path.join(
-                                region, denom), name, *args)
+                                region, denom), name, *args, **kwargs)
                         num_histos[name] = self.book(os.path.join(
-                            region, denom, numerator), name, *args)
+                            region, denom, numerator), name, *args, **kwargs)
 
                     #pt_bins = array.array('d', [10, 12.5, 15, 17.5, 20, 30, 50, 100])
 
@@ -68,9 +69,15 @@ class FakeRatesMMM(MegaBase):
                     #book_histo('muonPt', 'Muon Pt', len(pt_bins)-1, pt_bins)
                     book_histo('muonJetPt', 'Muon Jet Pt', 100, 0, 100)
                     book_histo('muonAbsEta', 'Muon Abs Eta', 100, -2.5, 2.5)
-                    book_histo('metSignificance', 'MET sig.', 100, 0, 10)
+                    #book_histo('metSignificance', 'MET sig.', 100, 0, 10)
                     book_histo('m1MtToMET', 'Muon 1 MT', 100, 0, 200)
                     book_histo('m3MtToMET', 'Muon 3 MT', 100, 0, 200)
+                    
+                    book_histo('m3JetptD', "", 200, 0, 1)
+                    book_histo('m3Jetmult', "", 50, 0, 50)
+
+                    book_histo('m3Jetmultvsm3JetPt', '', 200, 0, 200, 50, 0, 50,type=ROOT.TH2F)
+                    book_histo('m3JetptDvsm3JetPt', '' ,  200, 0, 200, 200, 0, 1,type=ROOT.TH2F)
 
 
     def process(self):
@@ -111,9 +118,16 @@ class FakeRatesMMM(MegaBase):
             the_histos['muonPt'].Fill(row.m3Pt, weight)
             the_histos['muonJetPt'].Fill(max(row.m3JetPt, row.m3Pt), weight)
             the_histos['muonAbsEta'].Fill(row.m3AbsEta, weight)
-            the_histos['metSignificance'].Fill(row.metSignificance, weight)
+            #the_histos['metSignificance'].Fill(row.metSignificance, weight)
             the_histos['m1MtToMET'].Fill(row.m1MtToMET, weight)
             the_histos['m3MtToMET'].Fill(row.m3MtToMET, weight)
+
+            the_histos['m3JetptD'].Fill(row.m3JetptD)
+            the_histos['m3Jetmult'].Fill(row.m3Jetmult)
+ 
+            the_histos['m3Jetmultvsm3JetPt'].Fill(max(row.m3JetPt, row.m3Pt),row.m3Jetmult)
+            the_histos['m3JetptDvsm3JetPt'].Fill(max(row.m3JetPt, row.m3Pt),row.m3JetptD) 
+
 
         histos = self.histograms
         for row in self.tree:
