@@ -23,13 +23,8 @@ class AnalyzeMMMM( MegaBase ):
         self.outfile     = outfile
         self.event_set   = set()
         self.pucorrector = make_PUCorrector()
-        #self.ntuple    = {}
-        #self.jsonFile  = open('4m_output.json','w')
 
     def begin(self):
-        # self.mytree = self.book('./', 'hzz4m', 'hzz4m', type=rt.TTree)
-        # self.mytree.CopyAddresses( self.tree )
-
         # Open HDF5 File
         self.h5file = tb.open_file('output.h5', mode='a')
         try:
@@ -67,10 +62,6 @@ class AnalyzeMMMM( MegaBase ):
             if not self.HZZ4l_phase_space(row):
                 continue
 
-            #self.output_ntuple(row)
-            #self.event_set.add( row.evt )
-            # self.mytree.Fill()
-
             self.store_row(row)
             self.eventCounts += 1
 
@@ -82,9 +73,6 @@ class AnalyzeMMMM( MegaBase ):
     def finish(self):
         print ""
         print self.eventCounts
-
-        #self.jsonFile.write( json.dumps(self.ntuple,indent=4) )
-        #self.jsonFile.close()
 
         self.h5table.flush()
         self.h5file.close()
