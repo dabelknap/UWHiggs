@@ -104,7 +104,7 @@ def mkdatacard(process_names, yields, shape_filename):
                                          else " -"
                                          for x in process_names]) + "\n"
     out += "BRhiggs_hzz4l lnN" + "".join([" 1.02" if x in ["sig","sig_ALT"]
-                                          else " -" for x in process_names])
+                                          else " -" for x in process_names]) + "\n"
 
     return out
 
