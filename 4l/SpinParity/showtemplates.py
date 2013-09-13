@@ -1,6 +1,11 @@
 """Plot unrolled 3D templates with bin ordering imposed
 """
 import sys
+from numpy import sqrt
+
+if len(sys.argv) < 3:
+    sys.stderr.write("Usage: python showtemplates.py [template_name.root] [out_file.pdf]\n")
+    sys.exit(1)
 
 sys.argv.append('-b-')
 import ROOT as rt
@@ -17,7 +22,7 @@ bin_vals = []
 for i in xrange(1,nbins+1):
     sig_val = sig_hist.GetBinContent(sig_hist.GetBin(i))
     alt_val = alt_hist.GetBinContent(alt_hist.GetBin(i))
-    bin_vals.append((sig_val,alt_val,float(sig_val)/float(alt_val)))
+    bin_vals.append((sig_val, alt_val, abs(float(alt_val) - float(sig_val)) / sqrt(float(alt_val) + float(sig_val))))
 
 bin_vals.sort(key=lambda x:x[2])
 
