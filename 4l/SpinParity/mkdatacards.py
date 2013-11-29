@@ -1,8 +1,13 @@
+"""
+Generate datacards from HDF5 n-tuples for running hypothesis separation between
+SM and JCP samples.
 
-
+Author: D. Austin Belknap, UW-Madison
+"""
 import tables as tb
 import numpy as np
 from numpy import cos
+import os
 import sys
 
 jcp_hyp = sys.argv[1]
@@ -10,13 +15,19 @@ jcp_hyp = sys.argv[1]
 sys.argv.append('-b-')
 import ROOT as rt
 
+NBINS = 4
 
 NTUPLE_DIR = '../ntuples/'
 
-CARD_DIR = './datacards/'
+CARD_DIR = './datacards/' + jcp_hyp + '/'
 
 SM_FILE = 'SMHiggs-126.h5'
-JP_FILES = {'0M' : 'Higgs0M-126.h5'}
+
+JP_FILES = {
+        '0M':    'Higgs0M-126.h5',
+        '0PH':   'Higgs0PH-126.h5',
+        '2PM':   'Higgs2M-126.h5',
+        '2PMqq': 'Higgs2Mqq-126.h5'}
 
 QQZZ_FILES = ['ZZMMMM.h5', 'ZZEEEE.h5', 'ZZTTTT.h5',
               'ZZEEMM.h5', 'ZZEETT.h5', 'ZZMMTT.h5']
@@ -29,6 +40,7 @@ CUTS = "(105.7 < mass) & (mass < 140.7)"
 
 
 def P2(x):
+    """Second-order legendre polynomial"""
     return 0.5*(3.0*x**2 - 1.0)
 
 
@@ -78,7 +90,19 @@ def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
     return (template_1d, template_1d.Integral())
 
 
-def mkdatacard(process_names, yields, shape_filename):
+def efficiency_string(process_names, chan):
+    if chan == "MMMM":
+        out = "CMS_eff_m lnN " + " ".join(['1.043' for x in process_names]) + '\n'
+    elif chan == "EEMM":
+        out =  "CMS_eff_m lnN " + " ".join(['1.015' for x in process_names]) + '\n'
+        out += "CMS_eff_e lnN " + " ".join(['1.024' for x in process_names]) + '\n'
+    elif chan == "EEEE":
+        out = "CMS_eff_e lnN " + " ".join(['1.101' for x in process_names]) + '\n'
+
+    return out
+
+
+def mkdatacard(process_names, yields, shape_filename, channel):
     if len(process_names) != len(yields):
         raise RuntimeError('process_names and yeilds not same length!')
 
@@ -100,55 +124,78 @@ def mkdatacard(process_names, yields, shape_filename):
     out += "rate" + "".join([" %.4f" % x for x in yields]) + "\n"
     out += "------------\n"
     out += "lumi_8TeV lnN" + "".join([" 1.044" for x in xrange(n_proc)]) + "\n"
+
+    out += "pdf_gg lnN " + " ".join(['1.0720' if x in ["sig","sig_ALT"]
+                                else '1.0710' if x is "ggzz_bkg"
+                                else '-' for x in process_names]) + "\n"
+
+    out += "pdf_qqbar lnN " + " ".join(['1.0342' if x is 'qqzz_bkg'
+                                   else '-' for x in process_names]) + "\n"
+
+    out += "pdf_hz4l_accept lnN " + " ".join(['1.02' if x in ['sig','sig_ALT']
+                                         else '-' for x in process_names]) + "\n"
+
     out += "QCDscale_ggH lnN" + "".join([" 1.0750" if x in ["sig","sig_ALT"]
                                          else " -"
                                          for x in process_names]) + "\n"
+
+    out += "QCDscale_ggVV lnN " + " ".join(['1.2435' if x is 'ggzz_bkg'
+                                           else '-' for x in process_names]) + '\n'
+
+    out += "QCDscale_VV lnN " + " ".join(['1.0285' if x is 'qqzz_bkg'
+                                         else '-' for x in process_names]) + '\n'
+
     out += "BRhiggs_hzz4l lnN" + "".join([" 1.02" if x in ["sig","sig_ALT"]
                                           else " -" for x in process_names]) + "\n"
+
+    out += efficiency_string(process_names, channel)
 
     return out
 
 
-if __name__ == "__main__":
-
+def main():
     JP_FILE = JP_FILES[jcp_hyp]
+
+    os.system("mkdir -p " + CARD_DIR)
 
     for chan in CHANNELS:
         ROOT_name = "template_8TeV_" + chan + ".root"
-        out_ROOT = rt.TFile(CARD_DIR + ROOT_name, "RECREATE")
         
-        sm_template = mktemplate1D(NTUPLE_DIR + SM_FILE, chan, "sig")
+        sm_template = mktemplate1D(NTUPLE_DIR + SM_FILE, chan, "sig", nbins=NBINS)
 
-        jp_template = mktemplate1D(NTUPLE_DIR + JP_FILE, chan, "sig_ALT")
+        jp_template = mktemplate1D(NTUPLE_DIR + JP_FILE, chan, "sig_ALT", nbins=NBINS)
 
-        qqzz_template = [rt.TH1F("qqzz_bkg", "qqzz_bkg", 8**3, 0, 1), 0]
+        qqzz_template = [rt.TH1F("qqzz_bkg", "qqzz_bkg", NBINS**3, 0, 1), 0]
         for QQZZ_FILE in QQZZ_FILES:
-            tmp = mktemplate1D(NTUPLE_DIR + QQZZ_FILE, chan, QQZZ_FILE)
+            tmp = mktemplate1D(NTUPLE_DIR + QQZZ_FILE, chan, QQZZ_FILE, nbins=NBINS)
             qqzz_template[0].Add(tmp[0])
             qqzz_template[1] += tmp[1]
 
-        ggzz_template = [rt.TH1F("ggzz_bkg", "ggzz_bkg", 8**3, 0, 1), 0]
+        ggzz_template = [rt.TH1F("ggzz_bkg", "ggzz_bkg", NBINS**3, 0, 1), 0]
         for GGZZ_FILE in GGZZ_FILES:
-            tmp = mktemplate1D(NTUPLE_DIR + GGZZ_FILE, chan, GGZZ_FILE)
+            tmp = mktemplate1D(NTUPLE_DIR + GGZZ_FILE, chan, GGZZ_FILE, nbins=NBINS)
             ggzz_template[0].Add(tmp[0])
             ggzz_template[1] += tmp[1]
         
-        out_card = open(CARD_DIR + 'datacard_8TeV_' + chan + '.txt', 'w')
-
         process_names = ["sig", "sig_ALT", "qqzz_bkg", "ggzz_bkg"]
         yields = [sm_template[1], jp_template[1], qqzz_template[1], ggzz_template[1]]
 
-        card_string = mkdatacard(process_names, yields, ROOT_name)
+        card_string = mkdatacard(process_names, yields, ROOT_name, chan)
 
-        out_card.write(card_string)
-        out_card.close()
+        with open(CARD_DIR + 'datacard_8TeV_' + chan + '.txt', 'w') as out_card:
+            out_card.write(card_string)
 
-        data = rt.TH1F("data_obs", "data_obs", 8**3, 0, 1)
+        data = rt.TH1F("data_obs", "data_obs", NBINS**3, 0, 1)
 
+        out_ROOT = rt.TFile(CARD_DIR + ROOT_name, "RECREATE")
         sm_template[0].Write()
         jp_template[0].Write()
         qqzz_template[0].Write()
         ggzz_template[0].Write()
         data.Write()
-
         out_ROOT.Close()
+
+
+if __name__ == "__main__":
+    main()
+    sys.exit(0)
