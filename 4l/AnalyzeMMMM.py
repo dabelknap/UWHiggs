@@ -11,6 +11,7 @@ import json
 import tables as tb
 from Event import Event4l
 from mcWeighting import make_PUCorrector
+from math import floor
 
 Z_MASS = 91.188
 
@@ -43,6 +44,9 @@ class AnalyzeMMMM( MegaBase ):
                 "Selected 4mu Events"
                 )
         self.h5row = self.h5table.row
+
+        with open("./PU/2012/pu_2012.json", 'r') as pu_file:
+            self.pu_weights = json.load(pu_file)
 
 
     def process(self):
@@ -83,7 +87,7 @@ class AnalyzeMMMM( MegaBase ):
         if row.run > 2:
             return 1.0
         else:
-            return self.pucorrector(row.nTruePU)
+            return self.pu_weights[str(int(floor(row.nTruePU)))]
 
 
     # The selectors are located here
