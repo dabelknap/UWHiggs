@@ -37,6 +37,9 @@ def compute_pu_weights(data_file_name, mc_file_name):
         else:
             out[i-1] = data_dist[i] / mc_dist[i]
 
+    data_file.Close()
+    mc_file.Close()
+
     return out
 
 

@@ -9,13 +9,14 @@ import numpy as np
 from numpy import cos
 import os
 import sys
+import logging as log
 
 jcp_hyp = sys.argv[1]
 
 sys.argv.append('-b-')
 import ROOT as rt
 
-NBINS = 4
+NBINS = 8
 
 NTUPLE_DIR = '../ntuples/'
 
@@ -36,7 +37,10 @@ GGZZ_FILES = ['ggZZ2L2L.h5', 'ggZZ4L.h5']
 
 CHANNELS = ['MMMM', 'EEEE', 'EEMM']
 
-CUTS = "(105.7 < mass) & (mass < 140.7)"
+#CUTS = "(105.7 < mass) & (mass < 140.7)"
+CUTS = "(116 < mass) & (mass < 136)"
+
+EPSILON = 0.0000001
 
 
 def P2(x):
@@ -56,6 +60,7 @@ def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
     lumi -- integrated luminosity (default 19.712)
     nbins -- number of bins to use per dimension (default 8)
     """
+    log.info("Building " + file_name + " " + channel + " template")
 
     h5file = tb.open_file(file_name, 'r')
 
@@ -83,7 +88,7 @@ def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
                 ind_3d = template.GetBin(k, j, i)
                 ind_1d = template_1d.GetBin(k + (j-1)*nbins + (i-1)*nbins**2)
                 template_1d.SetBinContent(ind_1d,
-                                          template.GetBinContent(ind_3d))
+                                          EPSILON + template.GetBinContent(ind_3d))
 
     h5file.close()
 
@@ -103,6 +108,7 @@ def efficiency_string(process_names, chan):
 
 
 def mkdatacard(process_names, yields, shape_filename, channel):
+    log.info("Building " + channel + " datacard")
     if len(process_names) != len(yields):
         raise RuntimeError('process_names and yeilds not same length!')
 
@@ -197,5 +203,6 @@ def main():
 
 
 if __name__ == "__main__":
+    log.basicConfig(level=log.INFO)
     main()
     sys.exit(0)
