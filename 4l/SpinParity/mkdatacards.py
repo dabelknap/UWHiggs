@@ -35,6 +35,9 @@ QQZZ_FILES = ['ZZMMMM.h5', 'ZZEEEE.h5', 'ZZTTTT.h5',
 
 GGZZ_FILES = ['ggZZ2L2L.h5', 'ggZZ4L.h5']
 
+DATA_FILES = ['data_2012A.h5', 'data_2012B.h5',
+              'data_2012C.h5', 'data_2012D.h5']
+
 CHANNELS = ['MMMM', 'EEEE', 'EEMM']
 
 #CUTS = "(105.7 < mass) & (mass < 140.7)"
@@ -48,7 +51,7 @@ def P2(x):
     return 0.5*(3.0*x**2 - 1.0)
 
 
-def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
+def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8, isData=False):
     """Generate an unrolled 3D template
 
     Arguments:
@@ -64,8 +67,12 @@ def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
 
     h5file = tb.open_file(file_name, 'r')
 
-    XSEC = float(h5file.root._v_attrs.XSEC)
-    NEVENTS = float(h5file.root._v_attrs.GENEVENTS)
+    if isData:
+        scaling = 1
+    else:
+        XSEC = float(h5file.root._v_attrs.XSEC)
+        NEVENTS = float(h5file.root._v_attrs.GENEVENTS)
+        scaling = lumi*XSEC/NEVENTS
 
     table = getattr(h5file.root, channel).events
 
@@ -74,11 +81,20 @@ def mktemplate1D(file_name, channel, hist_name, lumi=19.712, nbins=8):
                        nbins, -0.5, 1.0,  # P2(costheta2)
                        nbins, -1.0, 1.0)  # cos(2Phi)
 
+    event_set = set()
+
     for x in table.where(CUTS):
+        # avoid duplicated data events
+        if isData:
+            if x['event'] in event_set:
+                continue
+            else:
+                event_set.add(x['event'])
+
         template.Fill(P2(x['costheta1']),
                       P2(x['costheta2']),
                       cos(2.0*x['Phi']),
-                      lumi*XSEC/NEVENTS)
+                      scaling)
 
     template_1d = rt.TH1F(hist_name, hist_name, nbins**3, 0, 1)
 
@@ -107,7 +123,7 @@ def efficiency_string(process_names, chan):
     return out
 
 
-def mkdatacard(process_names, yields, shape_filename, channel):
+def mkdatacard(process_names, yields, shape_filename, channel, obs):
     log.info("Building " + channel + " datacard")
     if len(process_names) != len(yields):
         raise RuntimeError('process_names and yeilds not same length!')
@@ -121,7 +137,7 @@ def mkdatacard(process_names, yields, shape_filename, channel):
     out += "shapes * * " + shape_filename + " $PROCESS $PROCESS_$SYSTEMATIC\n"
     out += "------------\n"
     out += "bin a1\n"
-    out += "observation 0\n"
+    out += "observation %i\n" % obs
     out += "------------\n"
     out += "## mass window [105.7,140.7]\n"
     out += "bin" + "".join([" a1" for x in process_names]) + "\n"
@@ -166,7 +182,7 @@ def main():
 
     for chan in CHANNELS:
         ROOT_name = "template_8TeV_" + chan + ".root"
-        
+
         sm_template = mktemplate1D(NTUPLE_DIR + SM_FILE, chan, "sig", nbins=NBINS)
 
         jp_template = mktemplate1D(NTUPLE_DIR + JP_FILE, chan, "sig_ALT", nbins=NBINS)
@@ -186,19 +202,23 @@ def main():
         process_names = ["sig", "sig_ALT", "qqzz_bkg", "ggzz_bkg"]
         yields = [sm_template[1], jp_template[1], qqzz_template[1], ggzz_template[1]]
 
-        card_string = mkdatacard(process_names, yields, ROOT_name, chan)
+        data_shape = [rt.TH1F("data_obs", "data_obs", NBINS**3, 0, 1), 0]
+        for DATA_FILE in DATA_FILES:
+            tmp = mktemplate1D(NTUPLE_DIR + DATA_FILE, chan, DATA_FILE, nbins=NBINS, isData=True)
+            data_shape[0].Add(tmp[0])
+            data_shape[1] += tmp[1]
+
+        card_string = mkdatacard(process_names, yields, ROOT_name, chan, data_shape[1])
 
         with open(CARD_DIR + 'datacard_8TeV_' + chan + '.txt', 'w') as out_card:
             out_card.write(card_string)
-
-        data = rt.TH1F("data_obs", "data_obs", NBINS**3, 0, 1)
 
         out_ROOT = rt.TFile(CARD_DIR + ROOT_name, "RECREATE")
         sm_template[0].Write()
         jp_template[0].Write()
         qqzz_template[0].Write()
         ggzz_template[0].Write()
-        data.Write()
+        data_shape[0].Write()
         out_ROOT.Close()
 
 

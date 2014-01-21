@@ -11,6 +11,7 @@ import tables as tb
 from Event import Event4l
 from mcWeighting import make_PUCorrector
 from math import floor
+import json
 
 Z_MASS = 91.188
 
