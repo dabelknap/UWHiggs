@@ -1,0 +1,34 @@
+#Get common recipes
+recipes = ENV['fsa'] + '/PlotTools/rake/recipes.rake'
+import recipes
+
+#$jobid = ENV['jobid']
+$jobid = "hpphmm-110-ntuple-21-jan-14"
+
+#Figure out what run period we are in
+$period = '8TeV'
+
+
+def get_sample_names(substring)
+    inputs = Dir.glob("inputs/#{$jobid}/*.txt").select {|x| x.include? substring}
+    inputs = inputs.map{|x| File.basename(x).sub(".txt", "")}
+    return inputs
+end
+
+
+samples = Hash[
+    "hpp4l_110" => get_sample_names("HPlusPlusHMinusMinusHTo4L_M-110_8TeV-pythia6")
+]
+
+
+def get_analyzer_results(analyzer, the_samples)
+    output = Array.new
+    analyzer_base = analyzer.sub('.py', '')
+    the_samples.each do |sample|
+        output << "results/#{$jobid}/#{analyzer_base}/#{sample}.root"
+    end
+    return output
+end
+
+
+task :test => get_analyzer_results("DblHAnalyzeMMMM.py", samples["hpp4l_110"])
