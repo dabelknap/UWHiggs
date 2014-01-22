@@ -34,6 +34,8 @@ def muSelection(row, name):
     if getattr(row, getVar(name, 'IP3DS')) >= 4.0:
         return False
 
+    return True
+
 
 def eleSelection(row, name):
     if getattr(row, getVar(name, 'Pt')) < 15.0:
@@ -44,3 +46,5 @@ def eleSelection(row, name):
         return False
     if getattr(row, getVar(name, 'IP3DS')) >= 4.0:
         return False
+
+    return True

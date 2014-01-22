@@ -32,7 +32,6 @@ class DblHAnalyzeMMMM(MegaBase):
 
     def fill_histos(self, histos, folder_str, row, weight=None):
         for name in self.histo_locations[folder_str]:
-            print folder_str + '/' + name
             value = self.histograms[folder_str + '/' + name]
             if value.InheritsFrom('TH2'):
                 pass
@@ -45,9 +44,8 @@ class DblHAnalyzeMMMM(MegaBase):
 
     def process(self):
         for i, row in enumerate(self.tree):
-            print i
-            #if not self.preselection(row):
-            #    continue
+            if not self.preselection(row):
+                continue
 
             self.fill_histos(self.histograms, "test", row)
 
