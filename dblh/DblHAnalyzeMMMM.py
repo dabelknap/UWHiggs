@@ -54,6 +54,22 @@ class DblHAnalyzeMMMM(MegaBase):
         self.write_histos()
 
 
+    def qcdRejection(self, row):
+        cut = 12.0
+        for i in xrange(1, 4+1):
+            for j in xrange(i+1, 4+1):
+                if getattr(row, ''.join(['m', str(i), '_m', str(j), '_Mass'])) <= 12.0:
+                    return False
+        return True
+
+
+    def lepIsolation(self, row):
+        iso_type = 'RelPFIsoRho'
+        isos = sorted([getattr(row, 'm' + str(i+1) + iso_type) for i in xrange(4)])
+        iso_sum = isos[-1] + isos[-2]
+        return (iso_sum < 0.35)
+
+
     def preselection(self, row):
         for i in xrange(4):
             if not selections.muSelection(row, 'm' + str(i+1)):
@@ -61,6 +77,12 @@ class DblHAnalyzeMMMM(MegaBase):
 
         pts = sorted([row.m1Pt, row.m2Pt, row.m3Pt, row.m4Pt])
         if not (pts[-1] > 20.0 and pts[-2] > 10.0):
+            return False
+
+        if not self.qcdRejection(row):
+            return False
+
+        if not self.lepIsolation(row):
             return False
 
         return True
