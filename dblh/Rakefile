@@ -3,7 +3,8 @@ recipes = ENV['fsa'] + '/PlotTools/rake/recipes.rake'
 import recipes
 
 #$jobid = ENV['jobid']
-$jobid = "hpphmm-110-ntuple-21-jan-14"
+#$jobid = "hpphmm-110-ntuple-21-jan-14"
+$jobid = "ntuple_hpp4l-110_27jan14"
 
 #Figure out what run period we are in
 $period = '8TeV'

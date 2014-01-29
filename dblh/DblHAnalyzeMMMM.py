@@ -22,7 +22,7 @@ class DblHAnalyzeMMMM(MegaBase):
 
 
     def begin(self):
-        folder = 'test'
+        folder = 'mmmm'
         self.book_histos(folder)
 
         for key in self.histograms:
@@ -79,7 +79,7 @@ class DblHAnalyzeMMMM(MegaBase):
         cut = 12.0
         for i in xrange(1, 4+1):
             for j in xrange(i+1, 4+1):
-                if getattr(row, ''.join(['m', str(i), '_m', str(j), '_Mass'])) <= 12.0:
+                if getattr(row, 'm' + str(i) + '_m' + str(j) + '_Mass') <= 12.0:
                     return False
         return True
 

@@ -1,9 +1,11 @@
-#1/bin/bash
+#!/bin/bash
 
 #Get the data
 export datasrc=/nfs_scratch/belknap/data
+#export datasrc=/hdfs/store/user/belknap
 
-export jobid=hpphmm-110-ntuple-21-jan-14
+#export jobid=hpphmm-110-ntuple-21-jan-14
+export jobid=ntuple_hpp4l-110_27jan14
 export jobid8TeV=$jobid
 export afile=`find $datasrc/$jobid | grep root | head -n 1`
 
