@@ -26,6 +26,10 @@ class AnalyzeMMMM( MegaBase ):
         self.pucorrector = make_PUCorrector()
 
     def begin(self):
+        # Open lepton scale factor files
+        self.mu_scale_file = rt.TFile("./LepScale/MuonScaleFactors_2011_2012.root", "READ")
+        self.mu_scale_hist = self.mu_scale_file.Get("TH2D_ALL_2012")
+
         # Open HDF5 File
         self.h5file = tb.open_file('output.h5', mode='a')
         try:
@@ -75,6 +79,7 @@ class AnalyzeMMMM( MegaBase ):
 
 
     def finish(self):
+        self.mu_scale_file.Close()
         print ""
         print self.eventCounts
 
@@ -82,12 +87,30 @@ class AnalyzeMMMM( MegaBase ):
         self.h5file.close()
 
 
-    def event_weight(self, row):
+    def mu_scale_factor(self, row):
+        out = 1.0
+        for l in [1, 2, 3, 4]:
+            pt = getattr(row, "m%iPt" % l)
+            eta = getattr(row, "m%iEta" % l)
+            global_bin = self.mu_scale_hist.FindBin(pt, eta)
+            out *= self.mu_scale_hist.GetBinContent(global_bin)
+        return out
+
+
+    def pu_weight(self, row):
         # If data, don't weight
         if row.run > 2:
             return 1.0
         else:
             return self.pu_weights[str(int(floor(row.nTruePU)))]
+
+
+    def lep_scale(self, row):
+        # If data, don't weight
+        if row.run > 2:
+            return 1.0
+        else:
+            return self.mu_scale_factor(row)
 
 
     # The selectors are located here
@@ -164,7 +187,8 @@ class AnalyzeMMMM( MegaBase ):
         self.h5row['lumi']          = rtRow.lumi
         self.h5row['run']           = rtRow.run
 
-        self.h5row["pu_weight"]     = self.event_weight(rtRow)
+        self.h5row["pu_weight"]     = self.pu_weight(rtRow)
+        self.h5row["lep_weight"]    = self.lep_scale(rtRow)
 
         self.h5row['mass']          = rtRow.MassFsr
         self.h5row['pt']            = rtRow.PtFsr
