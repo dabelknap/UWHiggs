@@ -115,7 +115,8 @@ class AnalyzeMMMM( MegaBase ):
 
     # The selectors are located here
     def triggers(self, row):
-        return (row.doubleMuPass == 1)
+        #return (row.doubleMuPass == 1)
+        return (row.mu17mu8Pass > 0.5 or row.mu17mu8trkPass > 0.5)
 
 
     def lepton_trigger(self, row):

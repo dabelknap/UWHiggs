@@ -117,7 +117,8 @@ class AnalyzeEEEE(MegaBase):
 
     # The selectors are located here
     def triggers(self, row):
-        return (row.doubleEPass == 1)
+        #return (row.doubleEPass == 1)
+        return (row.tripleEPass > 0.5 or row.doubleETightPass > 0.5)
 
 
     def lepton_trigger(self, row):

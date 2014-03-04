@@ -130,7 +130,12 @@ class AnalyzeEEMM(MegaBase):
 
     # The selectors are located here
     def triggers(self, row):
-        return True
+        out = [row.doubleETightPass > 0.5,
+               row.mu17mu8Pass > 0.5,
+               row.mu17mu8trkPass > 0.5,
+               row.mu8ele17isoPass > 0.5,
+               row.mu17ele8isoPass > 0.5]
+        return any(out)
 
 
     def lepton_trigger(self, row):

@@ -139,7 +139,7 @@ def mkdatacard(process_names, yields, shape_filename, channel, obs):
     out += "bin a1\n"
     out += "observation %i\n" % obs
     out += "------------\n"
-    out += "## mass window [105.7,140.7]\n"
+    out += "## mass window [116,136]\n"
     out += "bin" + "".join([" a1" for x in process_names]) + "\n"
     out += "process" + "".join([" %s" % name for name in process_names]) + "\n"
     out += "process" + "".join([" %d" % (x-1) for x in xrange(n_proc)]) + "\n"
