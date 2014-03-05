@@ -98,7 +98,11 @@ class AnalyzeEEMM(MegaBase):
             pt = getattr(row, "e%iPt" % l)
             eta = getattr(row, "e%iEta" % l)
             global_bin = self.ele_scale_hist.FindBin(pt, eta)
-            out *= self.ele_scale_hist.GetBinContent(global_bin)
+            #out *= self.ele_scale_hist.GetBinContent(global_bin)
+            scl = self.ele_scale_hist.GetBinContent(global_bin)
+            if scl < 0.1:
+                scl = 1.0
+            out *= scl
         return out
 
 
@@ -108,7 +112,11 @@ class AnalyzeEEMM(MegaBase):
             pt = getattr(row, "m%iPt" % l)
             eta = getattr(row, "m%iEta" % l)
             global_bin = self.mu_scale_hist.FindBin(pt, eta)
-            out *= self.mu_scale_hist.GetBinContent(global_bin)
+            #out *= self.mu_scale_hist.GetBinContent(global_bin)
+            scl = self.mu_scale_hist.GetBinContent(global_bin)
+            if scl < 0.1:
+                scl = 1.0
+            out *= scl
         return out
 
 

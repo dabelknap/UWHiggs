@@ -3,7 +3,8 @@
 #NTUPDIR=./ntuples_20feb14
 
 ROOTDIR=./rootFiles_trig
-NTUPDIR=./ntuples_02mar14
+#NTUPDIR=./ntuples_02mar14
+NTUPDIR=./ntuples_05mar14
 
 all : signal zz ggzz data
 
